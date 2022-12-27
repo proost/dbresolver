@@ -81,7 +81,7 @@ func (s *namedStmt) Close() error {
 // Exec executes a prepared statement with the given arguments using primary db and returns.
 // Exec wraps sqlx.NamedStmt.Exec.
 func (s *namedStmt) Exec(arg interface{}) (sql.Result, error) {
-	db := s.loadBalancer.Select(s.primaries)
+	db := s.loadBalancer.Select(context.Background(), s.primaries)
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
@@ -93,7 +93,7 @@ func (s *namedStmt) Exec(arg interface{}) (sql.Result, error) {
 // ExecContext executes a prepared statement with the given arguments using primary db and returns.
 // ExecContext wraps sqlx.NamedStmt.ExecContext.
 func (s *namedStmt) ExecContext(ctx context.Context, arg interface{}) (sql.Result, error) {
-	db := s.loadBalancer.Select(s.primaries)
+	db := s.loadBalancer.Select(ctx, s.primaries)
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
@@ -105,7 +105,7 @@ func (s *namedStmt) ExecContext(ctx context.Context, arg interface{}) (sql.Resul
 // Get executes a prepared statement with the given arguments using readable db and returns.
 // Get wraps sqlx.NamedStmt.Get.
 func (s *namedStmt) Get(dest interface{}, arg interface{}) error {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(context.Background(), s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -117,7 +117,7 @@ func (s *namedStmt) Get(dest interface{}, arg interface{}) error {
 // GetContext executes a prepared statement with the given arguments using readable db and returns.
 // GetContext wraps sqlx.NamedStmt.GetContext.
 func (s *namedStmt) GetContext(ctx context.Context, dest interface{}, arg interface{}) error {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(ctx, s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -129,7 +129,7 @@ func (s *namedStmt) GetContext(ctx context.Context, dest interface{}, arg interf
 // MustExec executes a prepared statement with the given arguments using primary db and returns.
 // MustExec wraps sqlx.NamedStmt.MustExec.
 func (s *namedStmt) MustExec(arg interface{}) sql.Result {
-	db := s.loadBalancer.Select(s.primaries)
+	db := s.loadBalancer.Select(context.Background(), s.primaries)
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
@@ -141,7 +141,7 @@ func (s *namedStmt) MustExec(arg interface{}) sql.Result {
 // MustExecContext executes a prepared statement with the given arguments using primary db and returns.
 // MustExecContext wraps sqlx.NamedStmt.MustExecContext.
 func (s *namedStmt) MustExecContext(ctx context.Context, arg interface{}) sql.Result {
-	db := s.loadBalancer.Select(s.primaries)
+	db := s.loadBalancer.Select(ctx, s.primaries)
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
@@ -153,7 +153,7 @@ func (s *namedStmt) MustExecContext(ctx context.Context, arg interface{}) sql.Re
 // Query executes a prepared statement with the given arguments using readable db and returns.
 // Query wraps sqlx.NamedStmt.Query.
 func (s *namedStmt) Query(arg interface{}) (*sql.Rows, error) {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(context.Background(), s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -165,7 +165,7 @@ func (s *namedStmt) Query(arg interface{}) (*sql.Rows, error) {
 // QueryContext executes a prepared statement with the given arguments using readable db and returns.
 // QueryContext wraps sqlx.NamedStmt.QueryContext.
 func (s *namedStmt) QueryContext(ctx context.Context, arg interface{}) (*sql.Rows, error) {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(ctx, s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -178,7 +178,7 @@ func (s *namedStmt) QueryContext(ctx context.Context, arg interface{}) (*sql.Row
 // If selected statement is not found, returns nil.
 // QueryRow wraps sqlx.NamedStmt.QueryRow.
 func (s *namedStmt) QueryRow(arg interface{}) *sqlx.Row {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(context.Background(), s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -191,7 +191,7 @@ func (s *namedStmt) QueryRow(arg interface{}) *sqlx.Row {
 // If selected statement is not found, returns nil.
 // QueryRowContext wraps sqlx.NamedStmt.QueryRowContext.
 func (s *namedStmt) QueryRowContext(ctx context.Context, arg interface{}) *sqlx.Row {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(ctx, s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -204,7 +204,7 @@ func (s *namedStmt) QueryRowContext(ctx context.Context, arg interface{}) *sqlx.
 // If selected statement is not found, returns nil.
 // QueryRowx wraps sqlx.NamedStmt.QueryRowx.
 func (s *namedStmt) QueryRowx(arg interface{}) *sqlx.Row {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(context.Background(), s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -217,7 +217,7 @@ func (s *namedStmt) QueryRowx(arg interface{}) *sqlx.Row {
 // If selected statement is not found, returns nil.
 // QueryRowxContext wraps sqlx.NamedStmt.QueryRowxContext.
 func (s *namedStmt) QueryRowxContext(ctx context.Context, arg interface{}) *sqlx.Row {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(ctx, s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -229,7 +229,7 @@ func (s *namedStmt) QueryRowxContext(ctx context.Context, arg interface{}) *sqlx
 // Queryx executes a prepared statement with the given arguments using readable db and returns.
 // Queryx wraps sqlx.NamedStmt.Queryx.
 func (s *namedStmt) Queryx(arg interface{}) (*sqlx.Rows, error) {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(context.Background(), s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -241,7 +241,7 @@ func (s *namedStmt) Queryx(arg interface{}) (*sqlx.Rows, error) {
 // QueryxContext executes a prepared statement with the given arguments using readable db and returns.
 // QueryxContext wraps sqlx.NamedStmt.QueryxContext.
 func (s *namedStmt) QueryxContext(ctx context.Context, arg interface{}) (*sqlx.Rows, error) {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(ctx, s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -253,7 +253,7 @@ func (s *namedStmt) QueryxContext(ctx context.Context, arg interface{}) (*sqlx.R
 // Select executes a prepared statement with the given arguments using readable db and returns.
 // Select wraps sqlx.NamedStmt.Select.
 func (s *namedStmt) Select(dest interface{}, arg interface{}) error {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(context.Background(), s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -265,7 +265,7 @@ func (s *namedStmt) Select(dest interface{}, arg interface{}) error {
 // SelectContext executes a prepared statement with the given arguments using readable db and returns.
 // SelectContext wraps sqlx.NamedStmt.SelectContext.
 func (s *namedStmt) SelectContext(ctx context.Context, dest interface{}, arg interface{}) error {
-	db := s.loadBalancer.Select(s.reads)
+	db := s.loadBalancer.Select(ctx, s.reads)
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
@@ -278,7 +278,7 @@ func (s *namedStmt) SelectContext(ctx context.Context, dest interface{}, arg int
 // If selected statement is not found, returns nil.
 // Unsafe wraps sqlx.NamedStmt.Unsafe.
 func (s *namedStmt) Unsafe() *sqlx.NamedStmt {
-	db := s.loadBalancer.Select(s.primaries)
+	db := s.loadBalancer.Select(context.Background(), s.primaries)
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
