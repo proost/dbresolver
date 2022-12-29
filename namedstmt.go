@@ -11,7 +11,7 @@ import (
 
 // errors.
 var (
-	errSelectedStmtNotFound = errors.New("dbresolver: selected stmt not found")
+	errSelectedNamedStmtNotFound = errors.New("dbresolver: selected named stmt not found")
 )
 
 // NamedStmt is a wrapper around sqlx.NamedStmt.
@@ -85,7 +85,7 @@ func (s *namedStmt) Exec(arg interface{}) (sql.Result, error) {
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
-		return nil, errors.Wrapf(errSelectedStmtNotFound, "primary db: %v", db)
+		return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "primary db: %v", db)
 	}
 	return stmt.Exec(arg)
 }
@@ -97,7 +97,7 @@ func (s *namedStmt) ExecContext(ctx context.Context, arg interface{}) (sql.Resul
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
-		return nil, errors.Wrapf(errSelectedStmtNotFound, "primary db: %v", db)
+		return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "primary db: %v", db)
 	}
 	return stmt.ExecContext(ctx, arg)
 }
@@ -109,7 +109,7 @@ func (s *namedStmt) Get(dest interface{}, arg interface{}) error {
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.Get(dest, arg)
 }
@@ -121,7 +121,7 @@ func (s *namedStmt) GetContext(ctx context.Context, dest interface{}, arg interf
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.GetContext(ctx, dest, arg)
 }
@@ -133,7 +133,7 @@ func (s *namedStmt) MustExec(arg interface{}) sql.Result {
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
-		panic(errors.Wrapf(errSelectedStmtNotFound, "primary db: %v", db))
+		panic(errors.Wrapf(errSelectedNamedStmtNotFound, "primary db: %v", db))
 	}
 	return stmt.MustExec(arg)
 }
@@ -145,7 +145,7 @@ func (s *namedStmt) MustExecContext(ctx context.Context, arg interface{}) sql.Re
 	stmt, ok := s.primaryStmts[db]
 	if !ok {
 		// Should not happen.
-		panic(errors.Wrapf(errSelectedStmtNotFound, "primary db: %v", db))
+		panic(errors.Wrapf(errSelectedNamedStmtNotFound, "primary db: %v", db))
 	}
 	return stmt.MustExecContext(ctx, arg)
 }
@@ -157,7 +157,7 @@ func (s *namedStmt) Query(arg interface{}) (*sql.Rows, error) {
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.Query(arg)
 }
@@ -169,7 +169,7 @@ func (s *namedStmt) QueryContext(ctx context.Context, arg interface{}) (*sql.Row
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.QueryContext(ctx, arg)
 }
@@ -233,7 +233,7 @@ func (s *namedStmt) Queryx(arg interface{}) (*sqlx.Rows, error) {
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.Queryx(arg)
 }
@@ -245,7 +245,7 @@ func (s *namedStmt) QueryxContext(ctx context.Context, arg interface{}) (*sqlx.R
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.QueryxContext(ctx, arg)
 }
@@ -257,7 +257,7 @@ func (s *namedStmt) Select(dest interface{}, arg interface{}) error {
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.Select(dest, arg)
 }
@@ -269,7 +269,7 @@ func (s *namedStmt) SelectContext(ctx context.Context, dest interface{}, arg int
 	stmt, ok := s.readStmts[db]
 	if !ok {
 		// Should not happen.
-		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
+		return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
 	}
 	return stmt.SelectContext(ctx, dest, arg)
 }
