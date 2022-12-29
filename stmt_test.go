@@ -34,7 +34,7 @@ func TestStmt_Get(t *testing.T) {
 		}
 
 		result := &Person{}
-		err := stmt.Get(result, "foobar")
+		err := stmt.Get(result, "foo")
 
 		assert.ErrorIs(t, err, errSelectedStmtNotFound)
 	})
@@ -48,7 +48,7 @@ func TestStmt_Get(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -70,7 +70,7 @@ func TestStmt_Get(t *testing.T) {
 		}
 
 		result := &Person{}
-		err = stmt.Get(result, "foobar")
+		err = stmt.Get(result, "foo")
 
 		assert.ErrorIs(t, err, mockError)
 	})
@@ -83,9 +83,9 @@ func TestStmt_Get(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo"))
+				AddRow("foo", "bar"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -106,12 +106,12 @@ func TestStmt_Get(t *testing.T) {
 		}
 
 		result := &Person{}
-		err = stmt.Get(result, "foobar")
+		err = stmt.Get(result, "foo")
 
 		assert.NoError(t, err)
 		expected := &Person{
-			FirstName: "foobar",
-			LastName:  "foo",
+			FirstName: "foo",
+			LastName:  "bar",
 		}
 		assert.Equal(t, expected, result)
 	})
@@ -139,7 +139,7 @@ func TestStmt_GetContext(t *testing.T) {
 		}
 
 		result := &Person{}
-		err := stmt.GetContext(context.Background(), result, "foobar")
+		err := stmt.GetContext(context.Background(), result, "foo")
 
 		assert.ErrorIs(t, err, errSelectedStmtNotFound)
 	})
@@ -153,7 +153,7 @@ func TestStmt_GetContext(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -175,7 +175,7 @@ func TestStmt_GetContext(t *testing.T) {
 		}
 
 		result := &Person{}
-		err = stmt.GetContext(context.Background(), result, "foobar")
+		err = stmt.GetContext(context.Background(), result, "foo")
 
 		assert.ErrorIs(t, err, mockError)
 	})
@@ -188,9 +188,9 @@ func TestStmt_GetContext(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo"))
+				AddRow("foo", "bar"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -211,12 +211,12 @@ func TestStmt_GetContext(t *testing.T) {
 		}
 
 		result := &Person{}
-		err = stmt.GetContext(context.Background(), result, "foobar")
+		err = stmt.GetContext(context.Background(), result, "foo")
 
 		assert.NoError(t, err)
 		expected := &Person{
-			FirstName: "foobar",
-			LastName:  "foo",
+			FirstName: "foo",
+			LastName:  "bar",
 		}
 		assert.Equal(t, expected, result)
 	})
@@ -240,7 +240,7 @@ func TestStmt_MustExec(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			result := stmt.MustExec("foobar", "foo")
+			result := stmt.MustExec("foo", "bar")
 			assert.Nil(t, result)
 		})
 	})
@@ -250,7 +250,7 @@ func TestStmt_MustExec(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
 			ExpectExec().
-			WithArgs(driver.Value("foobar"), driver.Value("foo")).
+			WithArgs(driver.Value("foo"), driver.Value("bar")).
 			WillReturnError(mockError)
 		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
 		mockPrimaryDB1Stmt, err := mockPrimaryDB1.Preparex(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`)
@@ -272,7 +272,7 @@ func TestStmt_MustExec(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			result := stmt.MustExec("foobar", "foo")
+			result := stmt.MustExec("foo", "bar")
 
 			assert.Nil(t, result)
 		})
@@ -282,7 +282,7 @@ func TestStmt_MustExec(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
 			ExpectExec().
-			WithArgs(driver.Value("foobar"), driver.Value("foo")).
+			WithArgs(driver.Value("foo"), driver.Value("bar")).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
 		mockPrimaryDB1Stmt, err := mockPrimaryDB1.Preparex(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`)
@@ -303,7 +303,7 @@ func TestStmt_MustExec(t *testing.T) {
 			},
 		}
 
-		result := stmt.MustExec("foobar", "foo")
+		result := stmt.MustExec("foo", "bar")
 
 		lastInsertIDResult, err := result.LastInsertId()
 		assert.NoError(t, err)
@@ -332,7 +332,7 @@ func TestStmt_MustExecContext(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			result := stmt.MustExecContext(context.Background(), "foobar", "foo")
+			result := stmt.MustExecContext(context.Background(), "foo", "bar")
 			assert.Nil(t, result)
 		})
 	})
@@ -342,7 +342,7 @@ func TestStmt_MustExecContext(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
 			ExpectExec().
-			WithArgs(driver.Value("foobar"), driver.Value("foo")).
+			WithArgs(driver.Value("foo"), driver.Value("bar")).
 			WillReturnError(mockError)
 		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
 		mockPrimaryDB1Stmt, err := mockPrimaryDB1.Preparex(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`)
@@ -364,7 +364,7 @@ func TestStmt_MustExecContext(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			result := stmt.MustExecContext(context.Background(), "foobar", "foo")
+			result := stmt.MustExecContext(context.Background(), "foo", "bar")
 
 			assert.Nil(t, result)
 		})
@@ -374,7 +374,7 @@ func TestStmt_MustExecContext(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
 			ExpectExec().
-			WithArgs(driver.Value("foobar"), driver.Value("foo")).
+			WithArgs(driver.Value("foo"), driver.Value("bar")).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
 		mockPrimaryDB1Stmt, err := mockPrimaryDB1.Preparex(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`)
@@ -395,7 +395,7 @@ func TestStmt_MustExecContext(t *testing.T) {
 			},
 		}
 
-		result := stmt.MustExecContext(context.Background(), "foobar", "foo")
+		result := stmt.MustExecContext(context.Background(), "foo", "bar")
 
 		lastInsertIDResult, err := result.LastInsertId()
 		assert.NoError(t, err)
@@ -423,7 +423,7 @@ func TestStmt_QueryRowx(t *testing.T) {
 			},
 		}
 
-		result := stmt.QueryRowx("foobar")
+		result := stmt.QueryRowx("foo")
 
 		assert.Nil(t, result)
 	})
@@ -433,7 +433,7 @@ func TestStmt_QueryRowx(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -454,7 +454,7 @@ func TestStmt_QueryRowx(t *testing.T) {
 			},
 		}
 
-		result := stmt.QueryRowx("foobar")
+		result := stmt.QueryRowx("foo")
 
 		err = result.Err()
 		assert.ErrorIs(t, err, mockError)
@@ -468,9 +468,9 @@ func TestStmt_QueryRowx(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo"))
+				AddRow("foo", "bar"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -490,12 +490,12 @@ func TestStmt_QueryRowx(t *testing.T) {
 			},
 		}
 
-		result := stmt.QueryRowx("foobar")
+		result := stmt.QueryRowx("foo")
 
 		assert.NoError(t, err)
 		expected := &Person{
-			FirstName: "foobar",
-			LastName:  "foo",
+			FirstName: "foo",
+			LastName:  "bar",
 		}
 		var actual Person
 		err = result.StructScan(&actual)
@@ -521,7 +521,7 @@ func TestStmt_QueryRowxContext(t *testing.T) {
 			},
 		}
 
-		result := stmt.QueryRowxContext(context.Background(), "foobar")
+		result := stmt.QueryRowxContext(context.Background(), "foo")
 
 		assert.Nil(t, result)
 	})
@@ -531,7 +531,7 @@ func TestStmt_QueryRowxContext(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -552,7 +552,7 @@ func TestStmt_QueryRowxContext(t *testing.T) {
 			},
 		}
 
-		result := stmt.QueryRowxContext(context.Background(), "foobar")
+		result := stmt.QueryRowxContext(context.Background(), "foo")
 
 		err = result.Err()
 		assert.ErrorIs(t, err, mockError)
@@ -566,9 +566,9 @@ func TestStmt_QueryRowxContext(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo"))
+				AddRow("foo", "bar"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -588,12 +588,12 @@ func TestStmt_QueryRowxContext(t *testing.T) {
 			},
 		}
 
-		result := stmt.QueryRowxContext(context.Background(), "foobar")
+		result := stmt.QueryRowxContext(context.Background(), "foo")
 
 		assert.NoError(t, err)
 		expected := &Person{
-			FirstName: "foobar",
-			LastName:  "foo",
+			FirstName: "foo",
+			LastName:  "bar",
 		}
 		var actual Person
 		err = result.StructScan(&actual)
@@ -619,7 +619,7 @@ func TestStmt_Queryx(t *testing.T) {
 			},
 		}
 
-		result, err := stmt.Queryx("foobar")
+		result, err := stmt.Queryx("foo")
 
 		assert.Nil(t, result)
 		assert.ErrorIs(t, err, errSelectedStmtNotFound)
@@ -630,7 +630,7 @@ func TestStmt_Queryx(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -651,7 +651,7 @@ func TestStmt_Queryx(t *testing.T) {
 			},
 		}
 
-		result, err := stmt.Queryx("foobar")
+		result, err := stmt.Queryx("foo")
 
 		assert.Nil(t, result)
 		assert.ErrorIs(t, err, mockError)
@@ -665,10 +665,10 @@ func TestStmt_Queryx(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo").
-				AddRow("foobar", "bar"))
+				AddRow("foo", "bar").
+				AddRow("foo", "baz"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -688,17 +688,17 @@ func TestStmt_Queryx(t *testing.T) {
 			},
 		}
 
-		result, err := stmt.Queryx("foobar")
+		result, err := stmt.Queryx("foo")
 
 		assert.NoError(t, err)
 		expected := []*Person{
 			{
-				FirstName: "foobar",
-				LastName:  "foo",
+				FirstName: "foo",
+				LastName:  "bar",
 			},
 			{
-				FirstName: "foobar",
-				LastName:  "bar",
+				FirstName: "foo",
+				LastName:  "baz",
 			},
 		}
 		i := 0
@@ -729,7 +729,7 @@ func TestStmt_QueryxContext(t *testing.T) {
 			},
 		}
 
-		result, err := stmt.QueryxContext(context.Background(), "foobar")
+		result, err := stmt.QueryxContext(context.Background(), "foo")
 
 		assert.Nil(t, result)
 		assert.ErrorIs(t, err, errSelectedStmtNotFound)
@@ -740,7 +740,7 @@ func TestStmt_QueryxContext(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -761,7 +761,7 @@ func TestStmt_QueryxContext(t *testing.T) {
 			},
 		}
 
-		result, err := stmt.QueryxContext(context.Background(), "foobar")
+		result, err := stmt.QueryxContext(context.Background(), "foo")
 
 		assert.Nil(t, result)
 		assert.ErrorIs(t, err, mockError)
@@ -775,10 +775,10 @@ func TestStmt_QueryxContext(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo").
-				AddRow("foobar", "bar"))
+				AddRow("foo", "bar").
+				AddRow("foo", "baz"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -798,17 +798,17 @@ func TestStmt_QueryxContext(t *testing.T) {
 			},
 		}
 
-		result, err := stmt.QueryxContext(context.Background(), "foobar")
+		result, err := stmt.QueryxContext(context.Background(), "foo")
 
 		assert.NoError(t, err)
 		expected := []*Person{
 			{
-				FirstName: "foobar",
-				LastName:  "foo",
+				FirstName: "foo",
+				LastName:  "bar",
 			},
 			{
-				FirstName: "foobar",
-				LastName:  "bar",
+				FirstName: "foo",
+				LastName:  "baz",
 			},
 		}
 		i := 0
@@ -844,7 +844,7 @@ func TestStmt_Select(t *testing.T) {
 		}
 
 		result := &Person{}
-		err := stmt.Select(result, "foobar")
+		err := stmt.Select(result, "foo")
 
 		assert.ErrorIs(t, err, errSelectedStmtNotFound)
 	})
@@ -858,7 +858,7 @@ func TestStmt_Select(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -880,7 +880,7 @@ func TestStmt_Select(t *testing.T) {
 		}
 
 		result := &Person{}
-		err = stmt.Select(result, "foobar")
+		err = stmt.Select(result, "foo")
 
 		assert.ErrorIs(t, err, mockError)
 	})
@@ -893,10 +893,10 @@ func TestStmt_Select(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo").
-				AddRow("foobar", "bar"))
+				AddRow("foo", "bar").
+				AddRow("foo", "baz"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -917,17 +917,17 @@ func TestStmt_Select(t *testing.T) {
 		}
 
 		var result []Person
-		err = stmt.Select(&result, "foobar")
+		err = stmt.Select(&result, "foo")
 
 		assert.NoError(t, err)
 		expected := []Person{
 			{
-				FirstName: "foobar",
-				LastName:  "foo",
+				FirstName: "foo",
+				LastName:  "bar",
 			},
 			{
-				FirstName: "foobar",
-				LastName:  "bar",
+				FirstName: "foo",
+				LastName:  "baz",
 			},
 		}
 		assert.Equal(t, expected, result)
@@ -956,7 +956,7 @@ func TestStmt_SelectContext(t *testing.T) {
 		}
 
 		result := &Person{}
-		err := stmt.SelectContext(context.Background(), result, "foobar")
+		err := stmt.SelectContext(context.Background(), result, "foo")
 
 		assert.ErrorIs(t, err, errSelectedStmtNotFound)
 	})
@@ -970,7 +970,7 @@ func TestStmt_SelectContext(t *testing.T) {
 		mockError := errors.New("mock error")
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnError(mockError)
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
@@ -992,7 +992,7 @@ func TestStmt_SelectContext(t *testing.T) {
 		}
 
 		result := &Person{}
-		err = stmt.SelectContext(context.Background(), result, "foobar")
+		err = stmt.SelectContext(context.Background(), result, "foo")
 
 		assert.ErrorIs(t, err, mockError)
 	})
@@ -1005,10 +1005,10 @@ func TestStmt_SelectContext(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			ExpectQuery().
-			WithArgs(driver.Value("foobar")).
+			WithArgs(driver.Value("foo")).
 			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).
-				AddRow("foobar", "foo").
-				AddRow("foobar", "bar"))
+				AddRow("foo", "bar").
+				AddRow("foo", "baz"))
 		mockRead1 := sqlx.NewDb(mockDB1, "mock1")
 		mockReadStmt1, err := mockRead1.Preparex(`SELECT * FROM person WHERE first_name=?`)
 		assert.NoError(t, err)
@@ -1029,17 +1029,17 @@ func TestStmt_SelectContext(t *testing.T) {
 		}
 
 		var result []Person
-		err = stmt.SelectContext(context.Background(), &result, "foobar")
+		err = stmt.SelectContext(context.Background(), &result, "foo")
 
 		assert.NoError(t, err)
 		expected := []Person{
 			{
-				FirstName: "foobar",
-				LastName:  "foo",
+				FirstName: "foo",
+				LastName:  "bar",
 			},
 			{
-				FirstName: "foobar",
-				LastName:  "bar",
+				FirstName: "foo",
+				LastName:  "baz",
 			},
 		}
 		assert.Equal(t, expected, result)
