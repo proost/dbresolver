@@ -45,7 +45,7 @@ func NewPrimaryDBsConfig(dbs []*sqlx.DB, policy ReadWritePolicy) *PrimaryDBsConf
 	}
 }
 
-// DBResolver choose one of databases and then executes a query.
+// DBResolver chooses one of databases and then executes a query.
 // This supposed to be aligned with sqlx.DB.
 // Some functions which must select from multiple database are only available for the primary DBResolver
 // or the first primary DBResolver (if using multi-primary). For example, `DriverName()`, `Unsafe()`.
@@ -150,49 +150,49 @@ func MustNewDBResolver(primaryDBsCfg *PrimaryDBsConfig, opts ...OptionFunc) DBRe
 	return db
 }
 
-// BeginTxx choose one of primary DBResolver, begins a transaction and returns an *sqlx.Tx.
+// BeginTxx chooses a primary database, begins a transaction and returns an *sqlx.Tx.
 // This supposed to be aligned with sqlx.DB.BeginTxx.
 func (r *dbResolver) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
 	db := r.loadBalancer.Select(ctx, r.primaries)
 	return db.BeginTxx(ctx, opts)
 }
 
-// Beginx choose one of primary DBResolver, begins a transaction and returns an *sqlx.Tx.
+// Beginx chooses a primary database, begins a transaction and returns an *sqlx.Tx.
 // This supposed to be aligned with sqlx.DB.Beginx.
 func (r *dbResolver) Beginx() (*sqlx.Tx, error) {
 	db := r.loadBalancer.Select(context.Background(), r.primaries)
 	return db.Beginx()
 }
 
-// BindNamed choose one of primary DBResolver and binds a query using the DB driver's bindvar type.
+// BindNamed chooses a primary database and binds a query using the DB driver's bindvar type.
 // This supposed to be aligned with sqlx.DB.BindNamed.
 func (r *dbResolver) BindNamed(query string, arg interface{}) (string, []interface{}, error) {
 	db := r.loadBalancer.Select(context.Background(), r.primaries)
 	return db.BindNamed(query, arg)
 }
 
-// Connx choose one of primary DBResolver and returns an *sqlx.Conn.
+// Connx chooses a primary database and returns an *sqlx.Conn.
 // This supposed to be aligned with sqlx.DB.Connx.
 func (r *dbResolver) Connx(ctx context.Context) (*sqlx.Conn, error) {
 	db := r.loadBalancer.Select(ctx, r.primaries)
 	return db.Connx(ctx)
 }
 
-// DriverName choose one of primary DBResolver and returns the driverName.
+// DriverName chooses a primary database and returns the driverName.
 // This supposed to be aligned with sqlx.DB.DriverName.
 func (r *dbResolver) DriverName() string {
 	db := r.loadBalancer.Select(context.Background(), r.primaries)
 	return db.DriverName()
 }
 
-// Get choose one of readable databases and Get using chosen DB.
+// Get chooses a readable database and Get using chosen DB.
 // This supposed to be aligned with sqlx.DB.Get.
 func (r *dbResolver) Get(dest interface{}, query string, args ...interface{}) error {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
 	return db.Get(dest, query, args...)
 }
 
-// GetContext choose one of readable databases and Get using chosen DB.
+// GetContext chooses a readable database and Get using chosen DB.
 // This supposed to be aligned with sqlx.DB.GetContext.
 func (r *dbResolver) GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	db := r.loadBalancer.Select(ctx, r.reads)
@@ -209,56 +209,56 @@ func (r *dbResolver) MapperFunc(mf func(string) string) {
 	}
 }
 
-// MustBegin choose one of primary databases, starts a transaction and returns an *sqlx.Tx or panic.
+// MustBegin chooses a primary database, starts a transaction and returns an *sqlx.Tx or panic.
 // This supposed to be aligned with sqlx.DB.MustBegin.
 func (r *dbResolver) MustBegin() *sqlx.Tx {
 	db := r.loadBalancer.Select(context.Background(), r.primaries)
 	return db.MustBegin()
 }
 
-// MustBeginTx choose one of primary databases, starts a transaction and returns an *sqlx.Tx or panic.
+// MustBeginTx chooses a primary database, starts a transaction and returns an *sqlx.Tx or panic.
 // This supposed to be aligned with sqlx.DB.MustBeginTx.
 func (r *dbResolver) MustBeginTx(ctx context.Context, opts *sql.TxOptions) *sqlx.Tx {
 	db := r.loadBalancer.Select(ctx, r.primaries)
 	return db.MustBeginTx(ctx, opts)
 }
 
-// MustExec choose one of primary databases and executes a query or panic.
+// MustExec chooses a primary database and executes a query or panic.
 // This supposed to be aligned with sqlx.DB.MustExec.
 func (r *dbResolver) MustExec(query string, args ...interface{}) sql.Result {
 	db := r.loadBalancer.Select(context.Background(), r.primaries)
 	return db.MustExec(query, args...)
 }
 
-// MustExecContext choose one of primary databases and executes a query or panic.
+// MustExecContext chooses a primary database and executes a query or panic.
 // This supposed to be aligned with sqlx.DB.MustExecContext.
 func (r *dbResolver) MustExecContext(ctx context.Context, query string, args ...interface{}) sql.Result {
 	db := r.loadBalancer.Select(ctx, r.primaries)
 	return db.MustExecContext(ctx, query, args...)
 }
 
-// NamedExec choose one of primary databases and then executes a named query.
+// NamedExec chooses a primary database and then executes a named query.
 // This supposed to be aligned with sqlx.DB.NamedExec.
 func (r *dbResolver) NamedExec(query string, arg interface{}) (sql.Result, error) {
 	db := r.loadBalancer.Select(context.Background(), r.primaries)
 	return db.NamedExec(query, arg)
 }
 
-// NamedExecContext choose one of primary databases and then executes a named query.
+// NamedExecContext chooses a primary database and then executes a named query.
 // This supposed to be aligned with sqlx.DB.NamedExecContext.
 func (r *dbResolver) NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error) {
 	db := r.loadBalancer.Select(ctx, r.primaries)
 	return db.NamedExecContext(ctx, query, arg)
 }
 
-// NamedQuery choose one of readable databases and then executes a named query.
+// NamedQuery chooses a readable database and then executes a named query.
 // This supposed to be aligned with sqlx.DB.NamedQuery.
 func (r *dbResolver) NamedQuery(query string, arg interface{}) (*sqlx.Rows, error) {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
 	return db.NamedQuery(query, arg)
 }
 
-// NamedQueryContext choose one of readable databases and then executes a named query.
+// NamedQueryContext chooses a readable database and then executes a named query.
 // This supposed to be aligned with sqlx.DB.NamedQueryContext.
 func (r *dbResolver) NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
 	db := r.loadBalancer.Select(ctx, r.reads)

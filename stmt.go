@@ -40,7 +40,7 @@ type stmt struct {
 
 var _ Stmt = (*stmt)(nil)
 
-// Get executes a prepared statement with the given arguments using readable db and returns.
+// Get chooses a readable database's statement and Get using chosen statement.
 // Get is a wrapper around sqlx.Stmt.Get.
 func (s *stmt) Get(dest interface{}, args ...interface{}) error {
 	db := s.loadBalancer.Select(context.Background(), s.reads)
@@ -52,7 +52,7 @@ func (s *stmt) Get(dest interface{}, args ...interface{}) error {
 	return stmt.Get(dest, args...)
 }
 
-// GetContext executes a prepared statement with the given arguments using readable db and returns.
+// GetContext chooses a readable database's statement and Get using chosen statement.
 // GetContext is a wrapper around sqlx.Stmt.GetContext.
 func (s *stmt) GetContext(ctx context.Context, dest interface{}, args ...interface{}) error {
 	db := s.loadBalancer.Select(ctx, s.reads)
@@ -64,7 +64,7 @@ func (s *stmt) GetContext(ctx context.Context, dest interface{}, args ...interfa
 	return stmt.GetContext(ctx, dest, args...)
 }
 
-// MustExec executes a prepared statement with the given arguments using primary db and returns.
+// MustExec chooses a primary database's statement and executes using chosen statement or panic.
 // MustExec is a wrapper around sqlx.Stmt.MustExec.
 func (s *stmt) MustExec(args ...interface{}) sql.Result {
 	db := s.loadBalancer.Select(context.Background(), s.primaries)
@@ -76,7 +76,7 @@ func (s *stmt) MustExec(args ...interface{}) sql.Result {
 	return stmt.MustExec(args...)
 }
 
-// MustExecContext executes a prepared statement with the given arguments using primary db and returns.
+// MustExecContext chooses a primary database's statement and executes using chosen statement or panic.
 // MustExecContext is a wrapper around sqlx.Stmt.MustExecContext.
 func (s *stmt) MustExecContext(ctx context.Context, args ...interface{}) sql.Result {
 	db := s.loadBalancer.Select(ctx, s.primaries)
@@ -88,7 +88,7 @@ func (s *stmt) MustExecContext(ctx context.Context, args ...interface{}) sql.Res
 	return stmt.MustExecContext(ctx, args...)
 }
 
-// QueryRowx executes a prepared statement with the given arguments using readable db and returns.
+// QueryRowx chooses a readable database's statement, executes using chosen statement and returns *sqlx.Row.
 // If selected statement is not found, returns nil.
 // QueryRowx is a wrapper around sqlx.Stmt.QueryRowx.
 func (s *stmt) QueryRowx(args ...interface{}) *sqlx.Row {
@@ -101,7 +101,7 @@ func (s *stmt) QueryRowx(args ...interface{}) *sqlx.Row {
 	return stmt.QueryRowx(args...)
 }
 
-// QueryRowxContext executes a prepared statement with the given arguments using readable db and returns.
+// QueryRowxContext chooses a readable database's statement, executes using chosen statement and returns *sqlx.Row.
 // If selected statement is not found, returns nil.
 // QueryRowxContext is a wrapper around sqlx.Stmt.QueryRowxContext.
 func (s *stmt) QueryRowxContext(ctx context.Context, args ...interface{}) *sqlx.Row {
@@ -114,7 +114,7 @@ func (s *stmt) QueryRowxContext(ctx context.Context, args ...interface{}) *sqlx.
 	return stmt.QueryRowxContext(ctx, args...)
 }
 
-// Queryx executes a prepared statement with the given arguments using readable db and returns.
+// Queryx chooses a readable database's statement, executes using chosen statement and returns *sqlx.Rows.
 // Queryx is a wrapper around sqlx.Stmt.Queryx.
 func (s *stmt) Queryx(args ...interface{}) (*sqlx.Rows, error) {
 	db := s.loadBalancer.Select(context.Background(), s.reads)
@@ -126,7 +126,7 @@ func (s *stmt) Queryx(args ...interface{}) (*sqlx.Rows, error) {
 	return stmt.Queryx(args...)
 }
 
-// QueryxContext executes a prepared statement with the given arguments using readable db and returns.
+// QueryxContext chooses a readable database's statement, executes using chosen statement and returns *sqlx.Rows.
 // QueryxContext is a wrapper around sqlx.Stmt.QueryxContext.
 func (s *stmt) QueryxContext(ctx context.Context, args ...interface{}) (*sqlx.Rows, error) {
 	db := s.loadBalancer.Select(ctx, s.reads)
@@ -138,7 +138,7 @@ func (s *stmt) QueryxContext(ctx context.Context, args ...interface{}) (*sqlx.Ro
 	return stmt.QueryxContext(ctx, args...)
 }
 
-// Select executes a prepared statement with the given arguments using readable db and returns.
+// Select chooses a readable database's statement, executes using chosen statement.
 // Select is a wrapper around sqlx.Stmt.Select.
 func (s *stmt) Select(dest interface{}, args ...interface{}) error {
 	db := s.loadBalancer.Select(context.Background(), s.reads)
@@ -150,7 +150,7 @@ func (s *stmt) Select(dest interface{}, args ...interface{}) error {
 	return stmt.Select(dest, args...)
 }
 
-// SelectContext executes a prepared statement with the given arguments using readable db and returns.
+// SelectContext chooses a readable database's statement, executes using chosen statement.
 // SelectContext is a wrapper around sqlx.Stmt.SelectContext.
 func (s *stmt) SelectContext(ctx context.Context, dest interface{}, args ...interface{}) error {
 	db := s.loadBalancer.Select(ctx, s.reads)
@@ -162,7 +162,7 @@ func (s *stmt) SelectContext(ctx context.Context, dest interface{}, args ...inte
 	return stmt.SelectContext(ctx, dest, args...)
 }
 
-// Unsafe returns the underlying sqlx.Stmt.
+// Unsafe chooses a primary database's statement and returns underlying sql.Stmt.
 // If selected statement is not found, returns nil.
 // Unsafe wraps sqlx.Stmt.Unsafe.
 func (s *stmt) Unsafe() *sqlx.Stmt {

@@ -843,8 +843,8 @@ func TestStmt_Select(t *testing.T) {
 			},
 		}
 
-		result := &Person{}
-		err := stmt.Select(result, "foo")
+		var result []Person
+		err := stmt.Select(&result, "foo")
 
 		assert.ErrorIs(t, err, errSelectedStmtNotFound)
 	})
@@ -879,8 +879,8 @@ func TestStmt_Select(t *testing.T) {
 			},
 		}
 
-		result := &Person{}
-		err = stmt.Select(result, "foo")
+		var result []Person
+		err = stmt.Select(&result, "foo")
 
 		assert.ErrorIs(t, err, mockError)
 	})

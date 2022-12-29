@@ -14,28 +14,59 @@ import (
 
 func TestNamedStmt_Close(t *testing.T) {
 	// TODO(proost): add failing test case.
-	t.Run("success", func(t *testing.T) {
+	t.Run("success when already closed statement", func(t *testing.T) {
 		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			WillBeClosed()
 		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
-		mockPrimaryDB1Stmt, err := mockPrimaryDB1.PrepareNamed(`SELECT * FROM person WHERE first_name=?`)
+		mockPrimaryDB1Stmt, err := mockPrimaryDB1.PrepareNamed(`SELECT * FROM person WHERE first_name=:first_name`)
 		assert.NoError(t, err)
 		mockDB2, sqlMock2, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock2.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
 			WillBeClosed()
 		mockPrimaryDB2 := sqlx.NewDb(mockDB2, "mock2")
-		mockPrimaryDB2Stmt, err := mockPrimaryDB2.PrepareNamed(`SELECT * FROM person WHERE first_name=?`)
+		mockPrimaryDB2Stmt, err := mockPrimaryDB2.PrepareNamed(`SELECT * FROM person WHERE first_name=:first_name`)
+		assert.NoError(t, err)
+		stmt := &namedStmt{
+			primaries: []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
+			reads:     []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
+			primaryStmts: map[*sqlx.DB]*sqlx.NamedStmt{
+				mockPrimaryDB1: mockPrimaryDB1Stmt,
+				mockPrimaryDB2: mockPrimaryDB2Stmt,
+			},
+			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{
+				mockPrimaryDB1: mockPrimaryDB1Stmt,
+				mockPrimaryDB2: mockPrimaryDB2Stmt,
+			},
+		}
+
+		err = stmt.Close()
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
+			WillBeClosed()
+		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
+		mockPrimaryDB1Stmt, err := mockPrimaryDB1.PrepareNamed(`SELECT * FROM person WHERE first_name=:first_name`)
+		assert.NoError(t, err)
+		mockDB2, sqlMock2, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock2.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
+			WillBeClosed()
+		mockPrimaryDB2 := sqlx.NewDb(mockDB2, "mock2")
+		mockPrimaryDB2Stmt, err := mockPrimaryDB2.PrepareNamed(`SELECT * FROM person WHERE first_name=:first_name`)
 		assert.NoError(t, err)
 		mockDB3, sqlMock3, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock3.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
 		mockReadDB1 := sqlx.NewDb(mockDB3, "mock")
-		mockReadDB1Stmt, err := mockReadDB1.PrepareNamed(`SELECT * FROM person WHERE first_name=?`)
+		mockReadDB1Stmt, err := mockReadDB1.PrepareNamed(`SELECT * FROM person WHERE first_name=:first_name`)
 		assert.NoError(t, err)
 		mockDB4, sqlMock4, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 		sqlMock4.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
 		mockReadDB2 := sqlx.NewDb(mockDB4, "mock")
-		mockReadDB2Stmt, err := mockReadDB2.PrepareNamed(`SELECT * FROM person WHERE first_name=?`)
+		mockReadDB2Stmt, err := mockReadDB2.PrepareNamed(`SELECT * FROM person WHERE first_name=:first_name`)
 		assert.NoError(t, err)
 		stmt := &namedStmt{
 			primaries: []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
@@ -1628,8 +1659,8 @@ func TestNamedStmt_Select(t *testing.T) {
 		inputArg := map[string]interface{}{
 			"first_name": "foo",
 		}
-		result := &Person{}
-		err := stmt.Select(result, inputArg)
+		var result []Person
+		err := stmt.Select(&result, inputArg)
 
 		assert.ErrorIs(t, err, errSelectedNamedStmtNotFound)
 	})
@@ -1667,8 +1698,8 @@ func TestNamedStmt_Select(t *testing.T) {
 		inputArg := map[string]interface{}{
 			"first_name": "foo",
 		}
-		result := &Person{}
-		err = stmt.Select(result, inputArg)
+		var result []Person
+		err = stmt.Select(&result, inputArg)
 
 		assert.ErrorIs(t, err, mockError)
 	})
@@ -1749,8 +1780,8 @@ func TestNamedStmt_SelectContext(t *testing.T) {
 		inputArg := map[string]interface{}{
 			"first_name": "foo",
 		}
-		result := &Person{}
-		err := stmt.SelectContext(context.Background(), result, inputArg)
+		var result []Person
+		err := stmt.SelectContext(context.Background(), &result, inputArg)
 
 		assert.ErrorIs(t, err, errSelectedNamedStmtNotFound)
 	})
@@ -1788,8 +1819,8 @@ func TestNamedStmt_SelectContext(t *testing.T) {
 		inputArg := map[string]interface{}{
 			"first_name": "foo",
 		}
-		result := &Person{}
-		err = stmt.SelectContext(context.Background(), result, inputArg)
+		var result []Person
+		err = stmt.SelectContext(context.Background(), &result, inputArg)
 
 		assert.ErrorIs(t, err, mockError)
 	})
