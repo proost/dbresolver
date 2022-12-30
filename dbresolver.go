@@ -3,11 +3,12 @@ package dbresolver
 import (
 	"context"
 	"database/sql"
-	"sync"
+	"database/sql/driver"
+	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 // errors.
@@ -50,11 +51,18 @@ func NewPrimaryDBsConfig(dbs []*sqlx.DB, policy ReadWritePolicy) *PrimaryDBsConf
 // Some functions which must select from multiple database are only available for the primary DBResolver
 // or the first primary DBResolver (if using multi-primary). For example, `DriverName()`, `Unsafe()`.
 type DBResolver interface {
+	Begin() (*sql.Tx, error)
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 	BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
 	Beginx() (*sqlx.Tx, error)
 	BindNamed(query string, arg interface{}) (string, []interface{}, error)
+	Close() error
+	Conn(ctx context.Context) (*sql.Conn, error)
 	Connx(ctx context.Context) (*sqlx.Conn, error)
+	Driver() driver.Driver
 	DriverName() string
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	Get(dest interface{}, query string, args ...interface{}) error
 	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 	MapperFunc(mf func(string) string)
@@ -66,10 +74,18 @@ type DBResolver interface {
 	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
 	NamedQuery(query string, arg interface{}) (*sqlx.Rows, error)
 	NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error)
+	Ping() error
+	PingContext(ctx context.Context) error
+	Prepare(query string) (Stmt, error)
+	PrepareContext(ctx context.Context, query string) (Stmt, error)
 	PrepareNamed(query string) (NamedStmt, error)
 	PrepareNamedContext(ctx context.Context, query string) (NamedStmt, error)
 	Preparex(query string) (Stmt, error)
 	PreparexContext(ctx context.Context, query string) (Stmt, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	QueryRowx(query string, args ...interface{}) *sqlx.Row
 	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
 	Queryx(query string, args ...interface{}) (*sqlx.Rows, error)
@@ -77,6 +93,11 @@ type DBResolver interface {
 	Rebind(query string) string
 	Select(dest interface{}, query string, args ...interface{}) error
 	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	SetConnMaxIdleTime(d time.Duration)
+	SetConnMaxLifetime(d time.Duration)
+	SetMaxIdleConns(n int)
+	SetMaxOpenConns(n int)
+	Stats() sql.DBStats
 	Unsafe() *sqlx.DB
 }
 
@@ -150,6 +171,20 @@ func MustNewDBResolver(primaryDBsCfg *PrimaryDBsConfig, opts ...OptionFunc) DBRe
 	return db
 }
 
+// Begin chooses a primary database and starts a transaction.
+// This supposed to be aligned with sqlx.DB.Begin.
+func (r *dbResolver) Begin() (*sql.Tx, error) {
+	db := r.loadBalancer.Select(context.Background(), r.primaries)
+	return db.Begin()
+}
+
+// BeginTx chooses a primary database and starts a transaction.
+// This supposed to be aligned with sqlx.DB.BeginTx.
+func (r *dbResolver) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	db := r.loadBalancer.Select(ctx, r.primaries)
+	return db.BeginTx(ctx, opts)
+}
+
 // BeginTxx chooses a primary database, begins a transaction and returns an *sqlx.Tx.
 // This supposed to be aligned with sqlx.DB.BeginTxx.
 func (r *dbResolver) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
@@ -171,11 +206,41 @@ func (r *dbResolver) BindNamed(query string, arg interface{}) (string, []interfa
 	return db.BindNamed(query, arg)
 }
 
-// Connx chooses a primary database and returns an *sqlx.Conn.
+// Close closes all the databases.
+func (r *dbResolver) Close() error {
+	var errs error
+	for _, db := range r.primaries {
+		if err := db.Close(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	for _, db := range r.secondaries {
+		if err := db.Close(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// Conn chooses a primary database and returns a *sql.Conn.
+// This supposed to be aligned with sqlx.DB.Conn.
+func (r *dbResolver) Conn(ctx context.Context) (*sql.Conn, error) {
+	db := r.loadBalancer.Select(ctx, r.primaries)
+	return db.Conn(ctx)
+}
+
+// Connx chooses a primary database and returns a *sqlx.Conn.
 // This supposed to be aligned with sqlx.DB.Connx.
 func (r *dbResolver) Connx(ctx context.Context) (*sqlx.Conn, error) {
 	db := r.loadBalancer.Select(ctx, r.primaries)
 	return db.Connx(ctx)
+}
+
+// Driver chooses a primary database and returns a driver.Driver.
+// This supposed to be aligned with sqlx.DB.Driver.
+func (r *dbResolver) Driver() driver.Driver {
+	db := r.loadBalancer.Select(context.Background(), r.primaries)
+	return db.Driver()
 }
 
 // DriverName chooses a primary database and returns the driverName.
@@ -183,6 +248,20 @@ func (r *dbResolver) Connx(ctx context.Context) (*sqlx.Conn, error) {
 func (r *dbResolver) DriverName() string {
 	db := r.loadBalancer.Select(context.Background(), r.primaries)
 	return db.DriverName()
+}
+
+// Exec chooses a primary database and executes a query without returning any rows.
+// This supposed to be aligned with sqlx.DB.Exec.
+func (r *dbResolver) Exec(query string, args ...interface{}) (sql.Result, error) {
+	db := r.loadBalancer.Select(context.Background(), r.primaries)
+	return db.Exec(query, args...)
+}
+
+// ExecContext chooses a primary database and executes a query without returning any rows.
+// This supposed to be aligned with sqlx.DB.ExecContext.
+func (r *dbResolver) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	db := r.loadBalancer.Select(ctx, r.primaries)
+	return db.Exec(query, args...)
 }
 
 // Get chooses a readable database and Get using chosen DB.
@@ -265,48 +344,147 @@ func (r *dbResolver) NamedQueryContext(ctx context.Context, query string, arg in
 	return db.NamedQueryContext(ctx, query, arg)
 }
 
+// Ping sends a ping to the all databases.
+func (r *dbResolver) Ping() error {
+	var errs error
+	for _, db := range r.primaries {
+		if err := db.Ping(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	for _, db := range r.secondaries {
+		if err := db.Ping(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if errs != nil {
+		return errs
+	}
+	return nil
+}
+
+// PingContext sends a ping to the all databases.
+func (r *dbResolver) PingContext(ctx context.Context) error {
+	var errs error
+	for _, db := range r.primaries {
+		if err := db.PingContext(ctx); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	for _, db := range r.secondaries {
+		if err := db.PingContext(ctx); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if errs != nil {
+		return errs
+	}
+	return nil
+}
+
+// Prepare returns a Stmt which can be used sql.Stmt instead.
+// This supposed to be aligned with sqlx.DB.Prepare.
+func (r *dbResolver) Prepare(query string) (Stmt, error) {
+	primaryDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.primaries))
+	readDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.reads))
+
+	var errs error
+	for _, db := range r.primaries {
+		stmt, err := db.Preparex(query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		primaryDBStmts[db] = stmt
+	}
+	for _, db := range r.reads {
+		stmt, err := db.Preparex(query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		readDBStmts[db] = stmt
+	}
+	if errs != nil {
+		return nil, errs
+	}
+
+	return &stmt{
+		primaries:    r.primaries,
+		reads:        r.reads,
+		primaryStmts: primaryDBStmts,
+		readStmts:    readDBStmts,
+		loadBalancer: r.loadBalancer,
+	}, nil
+}
+
+// PrepareContext returns a Stmt which can be used sql.Stmt instead.
+// This supposed to be aligned with sqlx.DB.PrepareContext.
+func (r *dbResolver) PrepareContext(ctx context.Context, query string) (Stmt, error) {
+	primaryDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.primaries))
+	readDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.reads))
+
+	var errs error
+	for _, db := range r.primaries {
+		stmt, err := db.PreparexContext(ctx, query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		primaryDBStmts[db] = stmt
+	}
+	for _, db := range r.reads {
+		stmt, err := db.PreparexContext(ctx, query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		readDBStmts[db] = stmt
+	}
+	if errs != nil {
+		return nil, errs
+	}
+
+	return &stmt{
+		primaries:    r.primaries,
+		reads:        r.reads,
+		primaryStmts: primaryDBStmts,
+		readStmts:    readDBStmts,
+		loadBalancer: r.loadBalancer,
+	}, nil
+}
+
 // PrepareNamed returns an NamedStmt which can be used sqlx.NamedStmt instead.
 // This supposed to be aligned with sqlx.DB.PrepareNamed.
 func (r *dbResolver) PrepareNamed(query string) (NamedStmt, error) {
 	primaryDBStmts := make(map[*sqlx.DB]*sqlx.NamedStmt, len(r.primaries))
 	readDBStmts := make(map[*sqlx.DB]*sqlx.NamedStmt, len(r.reads))
 
-	var mu sync.Mutex
-	g, _ := errgroup.WithContext(context.Background())
+	var errs error
 	for _, db := range r.primaries {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.PrepareNamed(query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.PrepareNamed(query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			primaryDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		primaryDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
 	for _, db := range r.reads {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.PrepareNamed(query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.PrepareNamed(query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			readDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		readDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
+	if errs != nil {
+		return nil, errs
 	}
 
 	return &namedStmt{
@@ -324,43 +502,27 @@ func (r *dbResolver) PrepareNamedContext(ctx context.Context, query string) (Nam
 	primaryDBStmts := make(map[*sqlx.DB]*sqlx.NamedStmt, len(r.primaries))
 	readDBStmts := make(map[*sqlx.DB]*sqlx.NamedStmt, len(r.reads))
 
-	var mu sync.Mutex
-	g, gCtx := errgroup.WithContext(ctx)
+	var errs error
 	for _, db := range r.primaries {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.PrepareNamedContext(gCtx, query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.PrepareNamedContext(ctx, query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			primaryDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		primaryDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	g, gCtx = errgroup.WithContext(ctx)
 	for _, db := range r.reads {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.PrepareNamedContext(gCtx, query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.PrepareNamedContext(ctx, query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			readDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		readDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
+	if errs != nil {
+		return nil, errs
 	}
 
 	return &namedStmt{
@@ -372,48 +534,33 @@ func (r *dbResolver) PrepareNamedContext(ctx context.Context, query string) (Nam
 	}, nil
 }
 
-// Preparex returns an sqlx.Stmt which can be used sqlx.Stmt instead.
+// Preparex returns an Stmt which can be used sqlx.Stmt instead.
 // This supposed to be aligned with sqlx.DB.Preparex.
 func (r *dbResolver) Preparex(query string) (Stmt, error) {
 	primaryDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.primaries))
 	readDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.reads))
 
-	var mu sync.Mutex
-	g, _ := errgroup.WithContext(context.Background())
+	var errs error
 	for _, db := range r.primaries {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.Preparex(query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.Preparex(query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			primaryDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		primaryDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
 	for _, db := range r.reads {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.Preparex(query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.Preparex(query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			readDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		readDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
+	if errs != nil {
+		return nil, errs
 	}
 
 	return &stmt{
@@ -425,49 +572,33 @@ func (r *dbResolver) Preparex(query string) (Stmt, error) {
 	}, nil
 }
 
-// PreparexContext returns a sqlx.Stmt which can be used sqlx.Stmt instead.
+// PreparexContext returns a Stmt which can be used sqlx.Stmt instead.
 // This supposed to be aligned with sqlx.DB.PreparexContext.
 func (r *dbResolver) PreparexContext(ctx context.Context, query string) (Stmt, error) {
 	primaryDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.primaries))
 	readDBStmts := make(map[*sqlx.DB]*sqlx.Stmt, len(r.reads))
 
-	var mu sync.Mutex
-	g, gCtx := errgroup.WithContext(ctx)
+	var errs error
 	for _, db := range r.primaries {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.PreparexContext(gCtx, query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.PreparexContext(ctx, query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			primaryDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		primaryDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	g, gCtx = errgroup.WithContext(ctx)
 	for _, db := range r.reads {
-		db := db
-		g.Go(func() error {
-			stmt, err := db.PreparexContext(gCtx, query)
-			if err != nil {
-				return err
-			}
+		stmt, err := db.PreparexContext(ctx, query)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
-			mu.Lock()
-			readDBStmts[db] = stmt
-			mu.Unlock()
-			return nil
-		})
+		readDBStmts[db] = stmt
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
+	if errs != nil {
+		return nil, errs
 	}
 
 	return &stmt{
@@ -477,6 +608,34 @@ func (r *dbResolver) PreparexContext(ctx context.Context, query string) (Stmt, e
 		readStmts:    readDBStmts,
 		loadBalancer: r.loadBalancer,
 	}, nil
+}
+
+// Query chooses a readable database, executes the query and executes a query that returns sql.Rows.
+// This supposed to be aligned with sqlx.DB.Query.
+func (r *dbResolver) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	db := r.loadBalancer.Select(context.Background(), r.reads)
+	return db.Query(query, args...)
+}
+
+// QueryContext chooses a readable database, executes the query and executes a query that returns sql.Rows.
+// This supposed to be aligned with sqlx.DB.QueryContext.
+func (r *dbResolver) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	db := r.loadBalancer.Select(ctx, r.reads)
+	return db.QueryContext(ctx, query, args...)
+}
+
+// QueryRow chooses a readable database, executes the query and executes a query that returns sql.Row.
+// This supposed to be aligned with sqlx.DB.QueryRow.
+func (r *dbResolver) QueryRow(query string, args ...interface{}) *sql.Row {
+	db := r.loadBalancer.Select(context.Background(), r.reads)
+	return db.QueryRow(query, args...)
+}
+
+// QueryRowContext chooses a readable database, executes the query and executes a query that returns sql.Row.
+// This supposed to be aligned with sqlx.DB.QueryRowContext.
+func (r *dbResolver) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	db := r.loadBalancer.Select(ctx, r.reads)
+	return db.QueryRowContext(ctx, query, args...)
 }
 
 // QueryRowx chooses a readable database, queries the database and returns an *sqlx.Row.
@@ -527,6 +686,51 @@ func (r *dbResolver) Select(dest interface{}, query string, args ...interface{})
 func (r *dbResolver) SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	db := r.loadBalancer.Select(ctx, r.reads)
 	return db.SelectContext(ctx, dest, query, args...)
+}
+
+// SetConnMaxIdleTime sets the maximum amount of time a connection may be idle to all databases.
+func (r *dbResolver) SetConnMaxIdleTime(d time.Duration) {
+	for _, db := range r.primaries {
+		db.SetConnMaxIdleTime(d)
+	}
+	for _, db := range r.reads {
+		db.SetConnMaxIdleTime(d)
+	}
+}
+
+// SetConnMaxLifetime sets the maximum amount of time a connection may be reused to all databases.
+func (r *dbResolver) SetConnMaxLifetime(d time.Duration) {
+	for _, db := range r.primaries {
+		db.SetConnMaxLifetime(d)
+	}
+	for _, db := range r.reads {
+		db.SetConnMaxLifetime(d)
+	}
+}
+
+// SetMaxIdleConns sets the maximum number of connections in the idle connection pool to all databases.
+func (r *dbResolver) SetMaxIdleConns(n int) {
+	for _, db := range r.primaries {
+		db.SetMaxIdleConns(n)
+	}
+	for _, db := range r.reads {
+		db.SetMaxIdleConns(n)
+	}
+}
+
+// SetMaxOpenConns sets the maximum number of open connections to all databases.
+func (r *dbResolver) SetMaxOpenConns(n int) {
+	for _, db := range r.primaries {
+		db.SetMaxOpenConns(n)
+	}
+	for _, db := range r.reads {
+		db.SetMaxOpenConns(n)
+	}
+}
+
+// Stats returns first primary database statistics.
+func (r *dbResolver) Stats() sql.DBStats {
+	return r.primaries[0].Stats()
 }
 
 // Unsafe chose a primary database and returns a version of DB

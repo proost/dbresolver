@@ -2,6 +2,7 @@ package dbresolver
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"math/rand"
 	"testing"
@@ -129,6 +130,88 @@ func TestNewDBResolver(t *testing.T) {
 			reads: []*sqlx.DB{mockSecondaryDB},
 		}
 		assert.Equal(t, expected, result)
+	})
+}
+
+func TestDBResolver_Begin(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New()
+		mockError := errors.New("mock error")
+		sqlMock.ExpectBegin().
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakePrimaryDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.Begin()
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New()
+		sqlMock.ExpectBegin()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakePrimaryDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.Begin()
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.IsType(t, &sql.Tx{}, result)
+	})
+}
+
+func TestDBResolver_BeginTx(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New()
+		mockError := errors.New("mock error")
+		sqlMock.ExpectBegin().
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakePrimaryDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.BeginTx(context.Background(), nil)
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New()
+		sqlMock.ExpectBegin()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakePrimaryDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.BeginTx(context.Background(), nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.IsType(t, &sql.Tx{}, result)
 	})
 }
 
@@ -291,6 +374,104 @@ func TestDBResolver_BindNamed(t *testing.T) {
 	})
 }
 
+func TestDBResolver_Close(t *testing.T) {
+	t.Run("fail to close", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New()
+		mockError := errors.New("mock error")
+		sqlMock.ExpectClose().WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "primary")
+		mockDB, sqlMock, _ = sqlmock.New()
+		sqlMock.ExpectClose()
+		mockSecondaryDB := sqlx.NewDb(mockDB, "secondary")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+		}
+
+		err := r.Close()
+
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success to close", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New()
+		sqlMock.ExpectClose()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "primary")
+		mockDB, sqlMock, _ = sqlmock.New()
+		sqlMock.ExpectClose()
+		mockSecondaryDB := sqlx.NewDb(mockDB, "secondary")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+		}
+
+		err := r.Close()
+
+		assert.NoError(t, err)
+	})
+}
+
+func TestDBResolver_Conn(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, _, _ := sqlmock.New()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakePrimaryDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.Conn(context.Background())
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.IsType(t, &sql.Conn{}, result)
+	})
+}
+
+func TestDBResolver_Connx(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, _, _ := sqlmock.New()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakePrimaryDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.Connx(context.Background())
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.IsType(t, &sqlx.Conn{}, result)
+	})
+}
+
+func TestDBResolver_Driver(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New()
+		mockError := errors.New("mock error")
+		sqlMock.ExpectBegin().
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakePrimaryDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result := r.Driver()
+
+		assert.Equal(t, mockDB.Driver(), result)
+	})
+}
+
 func TestDBResolver_DriverName(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockDB, sqlMock, _ := sqlmock.New()
@@ -309,6 +490,98 @@ func TestDBResolver_DriverName(t *testing.T) {
 		result := r.DriverName()
 
 		assert.Equal(t, "mock", result)
+	})
+}
+
+func TestDBResolver_Exec(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectExec(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.Exec(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`, "foo", "bar")
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectExec(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.Exec(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`, "foo", "bar")
+
+		assert.NoError(t, err)
+		lastInsertID, err := result.LastInsertId()
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), lastInsertID)
+		rowsAffected, err := result.RowsAffected()
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), rowsAffected)
+	})
+}
+
+func TestDBResolver_ExecContext(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectExec(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.ExecContext(context.Background(), `INSERT INTO person (first_name, last_name) VALUES (?, ?)`, "foo", "bar")
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectExec(`INSERT INTO person (first_name, last_name) VALUES (?, ?)`).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+		}
+
+		result, err := r.ExecContext(context.Background(), `INSERT INTO person (first_name, last_name) VALUES (?, ?)`, "foo", "bar")
+
+		assert.NoError(t, err)
+		lastInsertID, err := result.LastInsertId()
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), lastInsertID)
+		rowsAffected, err := result.RowsAffected()
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), rowsAffected)
 	})
 }
 
@@ -908,6 +1181,82 @@ func TestDBResolver_NamedQueryContext(t *testing.T) {
 	})
 }
 
+func TestDbResolver_Ping(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectPing().
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "primary")
+		mockDB, sqlMock, _ = sqlmock.New(sqlmock.MonitorPingsOption(true))
+		sqlMock.ExpectPing()
+		mockSecondaryDB := sqlx.NewDb(mockDB, "secondary")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+		}
+
+		err := r.Ping()
+
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		sqlMock.ExpectPing()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "primary")
+		mockDB, sqlMock, _ = sqlmock.New(sqlmock.MonitorPingsOption(true))
+		sqlMock.ExpectPing()
+		mockSecondaryDB := sqlx.NewDb(mockDB, "secondary")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+		}
+
+		err := r.Ping()
+
+		assert.NoError(t, err)
+	})
+}
+
+func TestDbResolver_PingContext(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectPing().
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "primary")
+		mockDB, sqlMock, _ = sqlmock.New(sqlmock.MonitorPingsOption(true))
+		sqlMock.ExpectPing()
+		mockSecondaryDB := sqlx.NewDb(mockDB, "secondary")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+		}
+
+		err := r.PingContext(context.Background())
+
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		sqlMock.ExpectPing()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "primary")
+		mockDB, sqlMock, _ = sqlmock.New(sqlmock.MonitorPingsOption(true))
+		sqlMock.ExpectPing()
+		mockSecondaryDB := sqlx.NewDb(mockDB, "secondary")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+		}
+
+		err := r.PingContext(context.Background())
+
+		assert.NoError(t, err)
+	})
+}
+
 func TestDBResolver_PrepareNamed(t *testing.T) {
 	t.Run("failed to prepare primary DB named statement", func(t *testing.T) {
 		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
@@ -1046,6 +1395,144 @@ func TestDBResolver_PrepareNamedContext(t *testing.T) {
 	})
 }
 
+func TestDBResolver_Prepare(t *testing.T) {
+	t.Run("failed to prepare primary DB statement", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB},
+		}
+
+		inputQuery := `SELECT * FROM person WHERE first_name=?`
+		result, err := r.Prepare(inputQuery)
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("failed to prepare readable DB statement", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockError := errors.New("mock error")
+		sqlMock.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockSecondaryDB := sqlx.NewDb(mockDB, "mock")
+		r := &dbResolver{
+			primaries: []*sqlx.DB{sqlx.NewDb(mockDB, "mock")},
+			reads:     []*sqlx.DB{mockSecondaryDB},
+		}
+
+		inputQuery := `SELECT * FROM person WHERE first_name=?`
+		result, err := r.Prepare(inputQuery)
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
+		mockDB2, sqlMock2, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock2.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockPrimaryDB2 := sqlx.NewDb(mockDB2, "mock2")
+		mockDB3, sqlMock3, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock3.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockReadDB1 := sqlx.NewDb(mockDB3, "mock")
+		mockDB4, sqlMock4, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock4.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockReadDB2 := sqlx.NewDb(mockDB4, "mock")
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
+			reads:     []*sqlx.DB{mockReadDB1, mockReadDB2},
+		}
+
+		inputQuery := `SELECT * FROM person WHERE first_name=?`
+		result, err := r.Prepare(inputQuery)
+
+		resultNamedStmt := result.(*stmt)
+		assert.NoError(t, err)
+		assert.Equal(t, []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2}, resultNamedStmt.primaries)
+		assert.Equal(t, []*sqlx.DB{mockReadDB1, mockReadDB2}, resultNamedStmt.reads)
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.primaryStmts[mockPrimaryDB1])
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.primaryStmts[mockPrimaryDB2])
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.readStmts[mockReadDB1])
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.readStmts[mockReadDB2])
+	})
+}
+
+func TestDBResolver_PrepareContext(t *testing.T) {
+	t.Run("failed to prepare primary DB statement", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB},
+		}
+
+		inputQuery := `SELECT * FROM person WHERE first_name=?`
+		result, err := r.PrepareContext(context.Background(), inputQuery)
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("failed to prepare readable DB statement", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockError := errors.New("mock error")
+		sqlMock.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockSecondaryDB := sqlx.NewDb(mockDB, "mock")
+		r := &dbResolver{
+			primaries: []*sqlx.DB{sqlx.NewDb(mockDB, "mock")},
+			reads:     []*sqlx.DB{mockSecondaryDB},
+		}
+
+		inputQuery := `SELECT * FROM person WHERE first_name=?`
+		result, err := r.PrepareContext(context.Background(), inputQuery)
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB1, sqlMock1, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock1.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockPrimaryDB1 := sqlx.NewDb(mockDB1, "mock1")
+		mockDB2, sqlMock2, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock2.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockPrimaryDB2 := sqlx.NewDb(mockDB2, "mock2")
+		mockDB3, sqlMock3, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock3.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockReadDB1 := sqlx.NewDb(mockDB3, "mock")
+		mockDB4, sqlMock4, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock4.ExpectPrepare(`SELECT * FROM person WHERE first_name=?`)
+		mockReadDB2 := sqlx.NewDb(mockDB4, "mock")
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
+			reads:     []*sqlx.DB{mockReadDB1, mockReadDB2},
+		}
+
+		inputQuery := `SELECT * FROM person WHERE first_name=?`
+		result, err := r.PrepareContext(context.Background(), inputQuery)
+
+		resultNamedStmt := result.(*stmt)
+		assert.NoError(t, err)
+		assert.Equal(t, []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2}, resultNamedStmt.primaries)
+		assert.Equal(t, []*sqlx.DB{mockReadDB1, mockReadDB2}, resultNamedStmt.reads)
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.primaryStmts[mockPrimaryDB1])
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.primaryStmts[mockPrimaryDB2])
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.readStmts[mockReadDB1])
+		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.readStmts[mockReadDB2])
+	})
+}
+
 func TestDBResolver_Preparex(t *testing.T) {
 	t.Run("failed to prepare primary DB statement", func(t *testing.T) {
 		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
@@ -1181,6 +1668,264 @@ func TestDBResolver_PreparexContext(t *testing.T) {
 		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.primaryStmts[mockPrimaryDB2])
 		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.readStmts[mockReadDB1])
 		assert.IsType(t, &sqlx.Stmt{}, resultNamedStmt.readStmts[mockReadDB2])
+	})
+}
+
+func TestDBResolver_Query(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result, err := r.Query(`SELECT * FROM person WHERE first_name=?`, "foo")
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		type Person struct {
+			FirstName string `db:"first_name"`
+			LastName  string `db:"last_name"`
+		}
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnRows(
+				sqlmock.NewRows([]string{"first_name", "last_name"}).
+					AddRow("foo", "bar").
+					AddRow("foo", "baz"),
+			)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result, err := r.Query(`SELECT * FROM person WHERE first_name=?`, "foo")
+
+		assert.NoError(t, err)
+		expected := []*Person{
+			{
+				FirstName: "foo",
+				LastName:  "bar",
+			},
+			{
+				FirstName: "foo",
+				LastName:  "baz",
+			},
+		}
+		i := 0
+		for result.Next() {
+			var person Person
+			err := result.Scan(&person.FirstName, &person.LastName)
+			assert.NoError(t, err)
+			assert.Equal(t, expected[i], &person)
+			i++
+		}
+	})
+}
+
+func TestDBResolver_QueryContext(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result, err := r.QueryContext(context.Background(), `SELECT * FROM person WHERE first_name=?`, "foo")
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		type Person struct {
+			FirstName string `db:"first_name"`
+			LastName  string `db:"last_name"`
+		}
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnRows(
+				sqlmock.NewRows([]string{"first_name", "last_name"}).
+					AddRow("foo", "bar").
+					AddRow("foo", "baz"),
+			)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result, err := r.QueryContext(context.Background(), `SELECT * FROM person WHERE first_name=?`, "foo")
+
+		assert.NoError(t, err)
+		expected := []*Person{
+			{
+				FirstName: "foo",
+				LastName:  "bar",
+			},
+			{
+				FirstName: "foo",
+				LastName:  "baz",
+			},
+		}
+		i := 0
+		for result.Next() {
+			var person Person
+			err := result.Scan(&person.FirstName, &person.LastName)
+			assert.NoError(t, err)
+			assert.Equal(t, expected[i], &person)
+			i++
+		}
+	})
+}
+
+func TestDBResolver_QueryRow(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result := r.QueryRow(`SELECT * FROM person WHERE first_name=?`, "foo")
+
+		err := result.Err()
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		type Person struct {
+			FirstName string `db:"first_name"`
+			LastName  string `db:"last_name"`
+		}
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).AddRow("foo", "bar"))
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result := r.QueryRow(`SELECT * FROM person WHERE first_name=?`, "foo")
+
+		var person Person
+		err := result.Scan(&person.FirstName, &person.LastName)
+		assert.NoError(t, err)
+		expected := &Person{
+			FirstName: "foo",
+			LastName:  "bar",
+		}
+		assert.Equal(t, expected, &person)
+	})
+}
+
+func TestDBResolver_QueryRowContext(t *testing.T) {
+	t.Run("return error", func(t *testing.T) {
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		mockError := errors.New("mock error")
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnError(mockError)
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result := r.QueryRowContext(context.Background(), `SELECT * FROM person WHERE first_name=?`, "foo")
+
+		err := result.Err()
+		assert.ErrorIs(t, err, mockError)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		type Person struct {
+			FirstName string `db:"first_name"`
+			LastName  string `db:"last_name"`
+		}
+		mockDB, sqlMock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		sqlMock.ExpectQuery(`SELECT * FROM person WHERE first_name=?`).
+			WillReturnRows(sqlmock.NewRows([]string{"first_name", "last_name"}).AddRow("foo", "bar"))
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		mockSecondaryDB := sqlx.NewDb(fakeDB, "fake")
+		r := &dbResolver{
+			primaries:   []*sqlx.DB{mockPrimaryDB},
+			secondaries: []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{
+				random: rand.New(rand.NewSource(0)),
+			},
+			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
+		}
+
+		result := r.QueryRowContext(context.Background(), `SELECT * FROM person WHERE first_name=?`, "foo")
+
+		var person Person
+		err := result.Scan(&person.FirstName, &person.LastName)
+		assert.NoError(t, err)
+		expected := &Person{
+			FirstName: "foo",
+			LastName:  "bar",
+		}
+		assert.Equal(t, expected, &person)
 	})
 }
 
@@ -1649,7 +2394,22 @@ func TestDBResolver_SelectContext(t *testing.T) {
 	})
 }
 
-func TestDbResolver_Unsafe(t *testing.T) {
+func TestDbResolver_Stats(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, _, _ := sqlmock.New()
+		mockPrimaryDB := sqlx.NewDb(mockDB, "mock")
+		fakeDB, _, _ := sqlmock.New()
+		r := &dbResolver{
+			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
+		}
+
+		result := r.Stats()
+
+		assert.Equal(t, mockPrimaryDB.Stats(), result)
+	})
+}
+
+func TestDBResolver_Unsafe(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockDB, _, _ := sqlmock.New()
 		mockPrimaryDB1 := sqlx.NewDb(mockDB, "mock")
