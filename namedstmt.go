@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 // errors.
@@ -49,30 +49,21 @@ type namedStmt struct {
 // Close closes all primary database's named statements and readable database's named statements.
 // Close wraps sqlx.NamedStmt.Close.
 func (s *namedStmt) Close() error {
-	g, _ := errgroup.WithContext(context.Background())
-
-	for _, stmt := range s.primaryStmts {
-		stmt := stmt
-		g.Go(func() error {
-			err := stmt.Close()
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+	var errs error
+	for _, pStmt := range s.primaryStmts {
+		err := pStmt.Close()
+		if err != nil {
+			errs = multierror.Append(errs, err)
+		}
 	}
-	if err := g.Wait(); err != nil {
-		return err
+	for _, rStmt := range s.readStmts {
+		err := rStmt.Close()
+		if err != nil {
+			errs = multierror.Append(errs, err)
+		}
 	}
-
-	for _, stmt := range s.readStmts {
-		stmt := stmt
-		g.Go(func() error {
-			return stmt.Close()
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return err
+	if errs != nil {
+		return errs
 	}
 
 	return nil
