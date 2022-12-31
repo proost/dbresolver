@@ -2,7 +2,8 @@
 
 dbresolver is [sqlx](https://github.com/jmoiron/sqlx) resolver and wrapper for database cluster.
 
-[![Go](https://github.com/proost/dbresolver/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/proost/dbresolver/actions/workflows/ci.yml)
+[![CI](https://github.com/proost/dbresolver/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/proost/dbresolver/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/proost/dbresolver.svg)](https://pkg.go.dev/github.com/proost/dbresolver)
 
 ## Install
 
