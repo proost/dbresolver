@@ -268,14 +268,24 @@ func (r *dbResolver) ExecContext(ctx context.Context, query string, args ...inte
 // This supposed to be aligned with sqlx.DB.Get.
 func (r *dbResolver) Get(dest interface{}, query string, args ...interface{}) error {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
-	return db.Get(dest, query, args...)
+	err := db.Get(dest, query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(context.Background(), r.primaries)
+		err = dbPrimary.Get(dest, query, args...)
+	}
+	return err
 }
 
 // GetContext chooses a readable database and Get using chosen DB.
 // This supposed to be aligned with sqlx.DB.GetContext.
 func (r *dbResolver) GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	db := r.loadBalancer.Select(ctx, r.reads)
-	return db.GetContext(ctx, dest, query, args...)
+	err := db.GetContext(ctx, dest, query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(ctx, r.primaries)
+		err = dbPrimary.GetContext(ctx, dest, query, args...)
+	}
+	return err
 }
 
 // MapperFunc sets the mapper function for the all primary databases and secondary databases.
@@ -334,14 +344,24 @@ func (r *dbResolver) NamedExecContext(ctx context.Context, query string, arg int
 // This supposed to be aligned with sqlx.DB.NamedQuery.
 func (r *dbResolver) NamedQuery(query string, arg interface{}) (*sqlx.Rows, error) {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
-	return db.NamedQuery(query, arg)
+	rows, err := db.NamedQuery(query, arg)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(context.Background(), r.primaries)
+		rows, err = dbPrimary.NamedQuery(query, arg)
+	}
+	return rows, err
 }
 
 // NamedQueryContext chooses a readable database and then executes a named query.
 // This supposed to be aligned with sqlx.DB.NamedQueryContext.
 func (r *dbResolver) NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
 	db := r.loadBalancer.Select(ctx, r.reads)
-	return db.NamedQueryContext(ctx, query, arg)
+	rows, err := db.NamedQueryContext(ctx, query, arg)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(ctx, r.primaries)
+		rows, err = dbPrimary.NamedQueryContext(ctx, query, arg)
+	}
+	return rows, err
 }
 
 // Ping sends a ping to the all databases.
@@ -614,56 +634,96 @@ func (r *dbResolver) PreparexContext(ctx context.Context, query string) (Stmt, e
 // This supposed to be aligned with sqlx.DB.Query.
 func (r *dbResolver) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
-	return db.Query(query, args...)
+	rows, err := db.Query(query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(context.Background(), r.primaries)
+		rows, err = dbPrimary.Query(query, args...)
+	}
+	return rows, err
 }
 
 // QueryContext chooses a readable database, executes the query and executes a query that returns sql.Rows.
 // This supposed to be aligned with sqlx.DB.QueryContext.
 func (r *dbResolver) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	db := r.loadBalancer.Select(ctx, r.reads)
-	return db.QueryContext(ctx, query, args...)
+	rows, err := db.QueryContext(ctx, query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(ctx, r.primaries)
+		rows, err = dbPrimary.QueryContext(ctx, query, args...)
+	}
+	return rows, err
 }
 
 // QueryRow chooses a readable database, executes the query and executes a query that returns sql.Row.
 // This supposed to be aligned with sqlx.DB.QueryRow.
 func (r *dbResolver) QueryRow(query string, args ...interface{}) *sql.Row {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
-	return db.QueryRow(query, args...)
+	row := db.QueryRow(query, args...)
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := r.loadBalancer.Select(context.Background(), r.primaries)
+		row = dbPrimary.QueryRow(query, args...)
+	}
+	return row
 }
 
 // QueryRowContext chooses a readable database, executes the query and executes a query that returns sql.Row.
 // This supposed to be aligned with sqlx.DB.QueryRowContext.
 func (r *dbResolver) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	db := r.loadBalancer.Select(ctx, r.reads)
-	return db.QueryRowContext(ctx, query, args...)
+	row := db.QueryRowContext(ctx, query, args...)
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := r.loadBalancer.Select(ctx, r.primaries)
+		row = dbPrimary.QueryRowContext(ctx, query, args...)
+	}
+	return row
 }
 
 // QueryRowx chooses a readable database, queries the database and returns an *sqlx.Row.
 // This supposed to be aligned with sqlx.DB.QueryRowx.
 func (r *dbResolver) QueryRowx(query string, args ...interface{}) *sqlx.Row {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
-	return db.QueryRowx(query, args...)
+	row := db.QueryRowx(query, args...)
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := r.loadBalancer.Select(context.Background(), r.primaries)
+		row = dbPrimary.QueryRowx(query, args...)
+	}
+	return row
 }
 
 // QueryRowxContext chooses a readable database, queries the database and returns an *sqlx.Row.
 // This supposed to be aligned with sqlx.DB.QueryRowxContext.
 func (r *dbResolver) QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
 	db := r.loadBalancer.Select(ctx, r.reads)
-	return db.QueryRowxContext(ctx, query, args...)
+	row := db.QueryRowxContext(ctx, query, args...)
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := r.loadBalancer.Select(ctx, r.primaries)
+		row = dbPrimary.QueryRowxContext(ctx, query, args...)
+	}
+	return row
 }
 
 // Queryx chooses a readable database, queries the database and returns an *sqlx.Rows.
 // This supposed to be aligned with sqlx.DB.Queryx.
 func (r *dbResolver) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
-	return db.Queryx(query, args...)
+	rows, err := db.Queryx(query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(context.Background(), r.primaries)
+		rows, err = dbPrimary.Queryx(query, args...)
+	}
+	return rows, err
 }
 
 // QueryxContext chooses a readable database, queries the database and returns an *sqlx.Rows.
 // This supposed to be aligned with sqlx.DB.QueryxContext.
 func (r *dbResolver) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
 	db := r.loadBalancer.Select(ctx, r.reads)
-	return db.QueryxContext(ctx, query, args...)
+	rows, err := db.QueryxContext(ctx, query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(ctx, r.primaries)
+		rows, err = dbPrimary.QueryxContext(ctx, query, args...)
+	}
+	return rows, err
 }
 
 // Rebind chooses a primary database and
@@ -678,14 +738,24 @@ func (r *dbResolver) Rebind(query string) string {
 // This supposed to be aligned with sqlx.DB.Select.
 func (r *dbResolver) Select(dest interface{}, query string, args ...interface{}) error {
 	db := r.loadBalancer.Select(context.Background(), r.reads)
-	return db.Select(dest, query, args...)
+	err := db.Select(dest, query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(context.Background(), r.primaries)
+		err = dbPrimary.Select(dest, query, args...)
+	}
+	return err
 }
 
 // SelectContext chooses a readable database and execute SELECT using chosen DB.
 // This supposed to be aligned with sqlx.DB.SelectContext.
 func (r *dbResolver) SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	db := r.loadBalancer.Select(ctx, r.reads)
-	return db.SelectContext(ctx, dest, query, args...)
+	err := db.SelectContext(ctx, dest, query, args...)
+	if isDBConnectionError(err) {
+		dbPrimary := r.loadBalancer.Select(ctx, r.primaries)
+		err = dbPrimary.SelectContext(ctx, dest, query, args...)
+	}
+	return err
 }
 
 // SetConnMaxIdleTime sets the maximum amount of time a connection may be idle to all databases.
