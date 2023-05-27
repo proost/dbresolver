@@ -98,7 +98,18 @@ func (s *stmt) Get(dest interface{}, args ...interface{}) error {
 		// Should not happen.
 		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.Get(dest, args...)
+	err := stmt.Get(dest, args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(context.Background(), s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		err = stmtPrimary.Get(dest, args...)
+	}
+	return err
 }
 
 // GetContext chooses a readable database's statement and Get using chosen statement.
@@ -110,7 +121,18 @@ func (s *stmt) GetContext(ctx context.Context, dest interface{}, args ...interfa
 		// Should not happen.
 		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.GetContext(ctx, dest, args...)
+	err := stmt.GetContext(ctx, dest, args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(ctx, s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		err = stmtPrimary.GetContext(ctx, dest, args...)
+	}
+	return err
 }
 
 // MustExec chooses a primary database's statement and executes using chosen statement or panic.
@@ -146,7 +168,18 @@ func (s *stmt) Query(args ...interface{}) (*sql.Rows, error) {
 		// Should not happen.
 		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.Query(args...)
+	rows, err := stmt.Query(args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(context.Background(), s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		rows, err = stmtPrimary.Query(args...)
+	}
+	return rows, err
 }
 
 // QueryContext chooses a readable database's statement and executes using chosen statement.
@@ -158,7 +191,18 @@ func (s *stmt) QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows
 		// Should not happen.
 		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.QueryContext(ctx, args...)
+	rows, err := stmt.QueryContext(ctx, args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(ctx, s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		rows, err = stmtPrimary.QueryContext(ctx, args...)
+	}
+	return rows, err
 }
 
 // QueryRow chooses a readable database's statement, executes using chosen statement and returns *sqlx.Row.
@@ -171,7 +215,18 @@ func (s *stmt) QueryRow(args ...interface{}) *sql.Row {
 		// Should not happen.
 		return nil
 	}
-	return stmt.QueryRow(args...)
+	row := stmt.QueryRow(args...)
+
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := s.loadBalancer.Select(context.Background(), s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil
+		}
+		row = stmtPrimary.QueryRow(args...)
+	}
+	return row
 }
 
 // QueryRowContext chooses a readable database's statement, executes using chosen statement and returns *sqlx.Row.
@@ -184,7 +239,18 @@ func (s *stmt) QueryRowContext(ctx context.Context, args ...interface{}) *sql.Ro
 		// Should not happen.
 		return nil
 	}
-	return stmt.QueryRowContext(ctx, args...)
+	row := stmt.QueryRowContext(ctx, args...)
+
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := s.loadBalancer.Select(ctx, s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil
+		}
+		row = stmtPrimary.QueryRowContext(ctx, args...)
+	}
+	return row
 }
 
 // QueryRowx chooses a readable database's statement, executes using chosen statement and returns *sqlx.Row.
@@ -197,7 +263,18 @@ func (s *stmt) QueryRowx(args ...interface{}) *sqlx.Row {
 		// Should not happen.
 		return nil
 	}
-	return stmt.QueryRowx(args...)
+	row := stmt.QueryRowx(args...)
+
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := s.loadBalancer.Select(context.Background(), s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil
+		}
+		row = stmtPrimary.QueryRowx(args...)
+	}
+	return row
 }
 
 // QueryRowxContext chooses a readable database's statement, executes using chosen statement and returns *sqlx.Row.
@@ -210,7 +287,18 @@ func (s *stmt) QueryRowxContext(ctx context.Context, args ...interface{}) *sqlx.
 		// Should not happen.
 		return nil
 	}
-	return stmt.QueryRowxContext(ctx, args...)
+	row := stmt.QueryRowxContext(ctx, args...)
+
+	if isDBConnectionError(row.Err()) {
+		dbPrimary := s.loadBalancer.Select(ctx, s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil
+		}
+		row = stmtPrimary.QueryRowxContext(ctx, args...)
+	}
+	return row
 }
 
 // Queryx chooses a readable database's statement, executes using chosen statement and returns *sqlx.Rows.
@@ -222,7 +310,18 @@ func (s *stmt) Queryx(args ...interface{}) (*sqlx.Rows, error) {
 		// Should not happen.
 		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.Queryx(args...)
+	rows, err := stmt.Queryx(args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(context.Background(), s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		rows, err = stmtPrimary.Queryx(args...)
+	}
+	return rows, err
 }
 
 // QueryxContext chooses a readable database's statement, executes using chosen statement and returns *sqlx.Rows.
@@ -234,7 +333,18 @@ func (s *stmt) QueryxContext(ctx context.Context, args ...interface{}) (*sqlx.Ro
 		// Should not happen.
 		return nil, errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.QueryxContext(ctx, args...)
+	rows, err := stmt.QueryxContext(ctx, args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(ctx, s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return nil, errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		rows, err = stmtPrimary.QueryxContext(ctx, args...)
+	}
+	return rows, err
 }
 
 // Select chooses a readable database's statement, executes using chosen statement.
@@ -246,7 +356,18 @@ func (s *stmt) Select(dest interface{}, args ...interface{}) error {
 		// Should not happen.
 		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.Select(dest, args...)
+	err := stmt.Select(dest, args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(context.Background(), s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		err = stmtPrimary.Select(dest, args...)
+	}
+	return err
 }
 
 // SelectContext chooses a readable database's statement, executes using chosen statement.
@@ -258,7 +379,18 @@ func (s *stmt) SelectContext(ctx context.Context, dest interface{}, args ...inte
 		// Should not happen.
 		return errors.Wrapf(errSelectedStmtNotFound, "readable db: %v", db)
 	}
-	return stmt.SelectContext(ctx, dest, args...)
+	err := stmt.SelectContext(ctx, dest, args...)
+
+	if isDBConnectionError(err) {
+		dbPrimary := s.loadBalancer.Select(ctx, s.primaries)
+		stmtPrimary, ok := s.readStmts[dbPrimary]
+		if !ok {
+			// Should not happen.
+			return errors.Wrapf(errSelectedNamedStmtNotFound, "readable db: %v", db)
+		}
+		err = stmtPrimary.SelectContext(ctx, dest, args...)
+	}
+	return err
 }
 
 // Unsafe chooses a primary database's statement and returns underlying sql.Stmt.
