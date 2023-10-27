@@ -3,13 +3,8 @@ package dbresolver
 import (
 	"context"
 	"math/rand"
-	"time"
 
 	"github.com/jmoiron/sqlx"
-)
-
-var (
-	random = rand.New(rand.NewSource(time.Now().Unix()))
 )
 
 // LoadBalancer chooses a database from the given databases.
@@ -19,16 +14,12 @@ type LoadBalancer interface {
 }
 
 // RandomLoadBalancer is a load balancer that chooses a database randomly.
-type RandomLoadBalancer struct {
-	random *rand.Rand
-}
+type RandomLoadBalancer struct{}
 
 var _ LoadBalancer = (*RandomLoadBalancer)(nil)
 
 func NewRandomLoadBalancer() *RandomLoadBalancer {
-	return &RandomLoadBalancer{
-		random: random,
-	}
+	return &RandomLoadBalancer{}
 }
 
 // Select returns the database to use for the given operation.
@@ -41,5 +32,17 @@ func (b *RandomLoadBalancer) Select(_ context.Context, dbs []*sqlx.DB) *sqlx.DB 
 	if n == 1 {
 		return dbs[0]
 	}
-	return dbs[b.random.Intn(n)]
+	return dbs[rand.Intn(n)]
+}
+
+// injectedLoadBalancer is a load balancer that always chooses the given database.
+// It is used for testing.
+type injectedLoadBalancer struct {
+	db *sqlx.DB
+}
+
+var _ LoadBalancer = (*injectedLoadBalancer)(nil)
+
+func (b *injectedLoadBalancer) Select(_ context.Context, _ []*sqlx.DB) *sqlx.DB {
+	return b.db
 }
