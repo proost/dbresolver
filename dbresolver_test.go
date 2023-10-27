@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"math/rand"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -39,11 +38,9 @@ func TestNewDBResolver(t *testing.T) {
 
 		assert.NoError(t, err)
 		expected := &dbResolver{
-			primaries: []*sqlx.DB{mockPrimaryDB},
-			reads:     []*sqlx.DB{mockPrimaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: random,
-			},
+			primaries:    []*sqlx.DB{mockPrimaryDB},
+			reads:        []*sqlx.DB{mockPrimaryDB},
+			loadBalancer: &RandomLoadBalancer{},
 		}
 		assert.Equal(t, expected, result)
 	})
@@ -95,12 +92,10 @@ func TestNewDBResolver(t *testing.T) {
 
 		assert.NoError(t, err)
 		expected := &dbResolver{
-			primaries:   []*sqlx.DB{mockPrimaryDB},
-			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: random,
-			},
-			reads: []*sqlx.DB{mockSecondaryDB, mockPrimaryDB},
+			primaries:    []*sqlx.DB{mockPrimaryDB},
+			secondaries:  []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{},
+			reads:        []*sqlx.DB{mockSecondaryDB, mockPrimaryDB},
 		}
 		assert.Equal(t, expected, result)
 	})
@@ -122,12 +117,10 @@ func TestNewDBResolver(t *testing.T) {
 
 		assert.NoError(t, err)
 		expected := &dbResolver{
-			primaries:   []*sqlx.DB{mockPrimaryDB},
-			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: random,
-			},
-			reads: []*sqlx.DB{mockSecondaryDB},
+			primaries:    []*sqlx.DB{mockPrimaryDB},
+			secondaries:  []*sqlx.DB{mockSecondaryDB},
+			loadBalancer: &RandomLoadBalancer{},
+			reads:        []*sqlx.DB{mockSecondaryDB},
 		}
 		assert.Equal(t, expected, result)
 	})
@@ -143,8 +136,8 @@ func TestDBResolver_Begin(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -161,8 +154,8 @@ func TestDBResolver_Begin(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -184,8 +177,8 @@ func TestDBResolver_BeginTx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -202,8 +195,8 @@ func TestDBResolver_BeginTx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -225,8 +218,8 @@ func TestDBResolver_BeginTxx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -243,8 +236,8 @@ func TestDBResolver_BeginTxx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -266,8 +259,8 @@ func TestDBResolver_Beginx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -284,8 +277,8 @@ func TestDBResolver_Beginx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -418,8 +411,8 @@ func TestDBResolver_Conn(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -438,8 +431,8 @@ func TestDBResolver_Connx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -461,8 +454,8 @@ func TestDBResolver_Driver(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -482,8 +475,8 @@ func TestDBResolver_DriverName(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -503,8 +496,8 @@ func TestDBResolver_Exec(t *testing.T) {
 		fakeDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -522,8 +515,8 @@ func TestDBResolver_Exec(t *testing.T) {
 		fakeDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -549,8 +542,8 @@ func TestDBResolver_ExecContext(t *testing.T) {
 		fakeDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -568,8 +561,8 @@ func TestDBResolver_ExecContext(t *testing.T) {
 		fakeDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakeDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -601,8 +594,8 @@ func TestDBResolver_Get(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -627,8 +620,8 @@ func TestDBResolver_Get(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -661,8 +654,8 @@ func TestDBResolver_GetContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -687,8 +680,8 @@ func TestDBResolver_GetContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -715,8 +708,8 @@ func TestDBResolver_MustBegin(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -734,8 +727,8 @@ func TestDBResolver_MustBegin(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -755,8 +748,8 @@ func TestDBResolver_MustBeginTx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -774,8 +767,8 @@ func TestDBResolver_MustBeginTx(t *testing.T) {
 		fakePrimaryDB, _, _ := sqlmock.New()
 		r := &dbResolver{
 			primaries: []*sqlx.DB{mockPrimaryDB, sqlx.NewDb(fakePrimaryDB, "fake")},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 		}
 
@@ -797,8 +790,8 @@ func TestDBResolver_MustExec(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -821,8 +814,8 @@ func TestDBResolver_MustExec(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -850,8 +843,8 @@ func TestDBResolver_MustExecContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -874,8 +867,8 @@ func TestDBResolver_MustExecContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -903,8 +896,8 @@ func TestDBResolver_NamedExec(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -931,8 +924,8 @@ func TestDBResolver_NamedExec(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -966,8 +959,8 @@ func TestDBResolver_NamedExecContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -994,8 +987,8 @@ func TestDBResolver_NamedExecContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1029,8 +1022,8 @@ func TestDBResolver_NamedQuery(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1063,8 +1056,8 @@ func TestDBResolver_NamedQuery(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1111,8 +1104,8 @@ func TestDBResolver_NamedQueryContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1145,8 +1138,8 @@ func TestDBResolver_NamedQueryContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1683,8 +1676,8 @@ func TestDBResolver_Query(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1713,8 +1706,8 @@ func TestDBResolver_Query(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1755,8 +1748,8 @@ func TestDBResolver_QueryContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1785,8 +1778,8 @@ func TestDBResolver_QueryContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1827,8 +1820,8 @@ func TestDBResolver_QueryRow(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1853,8 +1846,8 @@ func TestDBResolver_QueryRow(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1884,8 +1877,8 @@ func TestDBResolver_QueryRowContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1910,8 +1903,8 @@ func TestDBResolver_QueryRowContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1941,8 +1934,8 @@ func TestDBResolver_QueryRowx(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1967,8 +1960,8 @@ func TestDBResolver_QueryRowx(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -1998,8 +1991,8 @@ func TestDBResolver_QueryRowxContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2024,8 +2017,8 @@ func TestDBResolver_QueryRowxContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2055,8 +2048,8 @@ func TestDBResolver_Queryx(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2085,8 +2078,8 @@ func TestDBResolver_Queryx(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2127,8 +2120,8 @@ func TestDBResolver_QueryxContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2157,8 +2150,8 @@ func TestDBResolver_QueryxContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2270,8 +2263,8 @@ func TestDBResolver_Select(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2300,8 +2293,8 @@ func TestDBResolver_Select(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2340,8 +2333,8 @@ func TestDBResolver_SelectContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2370,8 +2363,8 @@ func TestDBResolver_SelectContext(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB},
 			secondaries: []*sqlx.DB{mockSecondaryDB},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB, mockSecondaryDB},
 		}
@@ -2418,8 +2411,8 @@ func TestDBResolver_Unsafe(t *testing.T) {
 		r := &dbResolver{
 			primaries:   []*sqlx.DB{mockPrimaryDB1},
 			secondaries: []*sqlx.DB{mockPrimaryDB2},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 			reads: []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
 		}

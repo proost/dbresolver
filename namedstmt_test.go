@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql/driver"
 	"errors"
-	"math/rand"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -99,8 +98,8 @@ func TestNamedStmt_Exec(t *testing.T) {
 		stmt := &namedStmt{
 			primaries:    []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
 			primaryStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -135,8 +134,8 @@ func TestNamedStmt_Exec(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -170,8 +169,8 @@ func TestNamedStmt_Exec(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -203,8 +202,8 @@ func TestNamedStmt_ExecContext(t *testing.T) {
 		stmt := &namedStmt{
 			primaries:    []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
 			primaryStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -239,8 +238,8 @@ func TestNamedStmt_ExecContext(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -274,8 +273,8 @@ func TestNamedStmt_ExecContext(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -311,8 +310,8 @@ func TestNamedStmt_Get(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -350,8 +349,8 @@ func TestNamedStmt_Get(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -389,8 +388,8 @@ func TestNamedStmt_Get(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -425,8 +424,8 @@ func TestNamedStmt_GetContext(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -464,8 +463,8 @@ func TestNamedStmt_GetContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -503,8 +502,8 @@ func TestNamedStmt_GetContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -535,8 +534,8 @@ func TestNamedStmt_MustExec(t *testing.T) {
 		stmt := &namedStmt{
 			primaries:    []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
 			primaryStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -571,8 +570,8 @@ func TestNamedStmt_MustExec(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -607,8 +606,8 @@ func TestNamedStmt_MustExec(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -639,8 +638,8 @@ func TestNamedStmt_MustExecContext(t *testing.T) {
 		stmt := &namedStmt{
 			primaries:    []*sqlx.DB{mockPrimaryDB1, mockPrimaryDB2},
 			primaryStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -675,8 +674,8 @@ func TestNamedStmt_MustExecContext(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -711,8 +710,8 @@ func TestNamedStmt_MustExecContext(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryDB1Stmt,
 				mockPrimaryDB2: mockPrimaryDB2Stmt,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
@@ -743,8 +742,8 @@ func TestNamedStmt_Query(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -778,8 +777,8 @@ func TestNamedStmt_Query(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -818,8 +817,8 @@ func TestNamedStmt_Query(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -862,8 +861,8 @@ func TestNamedStmt_QueryContext(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -897,8 +896,8 @@ func TestNamedStmt_QueryContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -937,8 +936,8 @@ func TestNamedStmt_QueryContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -981,8 +980,8 @@ func TestNamedStmt_QueryRow(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1015,8 +1014,8 @@ func TestNamedStmt_QueryRow(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1054,8 +1053,8 @@ func TestNamedStmt_QueryRow(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1088,8 +1087,8 @@ func TestNamedStmt_QueryRowContext(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1122,8 +1121,8 @@ func TestNamedStmt_QueryRowContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1161,8 +1160,8 @@ func TestNamedStmt_QueryRowContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1195,8 +1194,8 @@ func TestNamedStmt_QueryRowx(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1229,8 +1228,8 @@ func TestNamedStmt_QueryRowx(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1268,8 +1267,8 @@ func TestNamedStmt_QueryRowx(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1302,8 +1301,8 @@ func TestNamedStmt_QueryRowxContext(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1336,8 +1335,8 @@ func TestNamedStmt_QueryRowxContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1375,8 +1374,8 @@ func TestNamedStmt_QueryRowxContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1409,8 +1408,8 @@ func TestNamedStmt_Queryx(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1444,8 +1443,8 @@ func TestNamedStmt_Queryx(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1484,8 +1483,8 @@ func TestNamedStmt_Queryx(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1528,8 +1527,8 @@ func TestNamedStmt_QueryxContext(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1563,8 +1562,8 @@ func TestNamedStmt_QueryxContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1603,8 +1602,8 @@ func TestNamedStmt_QueryxContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1651,8 +1650,8 @@ func TestNamedStmt_Select(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1690,8 +1689,8 @@ func TestNamedStmt_Select(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1730,8 +1729,8 @@ func TestNamedStmt_Select(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1772,8 +1771,8 @@ func TestNamedStmt_SelectContext(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1811,8 +1810,8 @@ func TestNamedStmt_SelectContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1851,8 +1850,8 @@ func TestNamedStmt_SelectContext(t *testing.T) {
 				mockRead1: mockReadStmt1,
 				mockRead2: mockReadStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1888,8 +1887,8 @@ func TestNamedStmt_Unsafe(t *testing.T) {
 		stmt := &namedStmt{
 			reads:     []*sqlx.DB{mockRead1, mockRead2},
 			readStmts: map[*sqlx.DB]*sqlx.NamedStmt{},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockRead1,
 			},
 		}
 
@@ -1915,8 +1914,8 @@ func TestNamedStmt_Unsafe(t *testing.T) {
 				mockPrimaryDB1: mockPrimaryStmt1,
 				mockPrimaryDB2: mockPrimaryStmt2,
 			},
-			loadBalancer: &RandomLoadBalancer{
-				random: rand.New(rand.NewSource(0)),
+			loadBalancer: &injectedLoadBalancer{
+				db: mockPrimaryDB1,
 			},
 		}
 
